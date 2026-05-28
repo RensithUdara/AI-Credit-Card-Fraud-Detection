@@ -128,6 +128,21 @@ The prediction output adds:
 - `Predicted_Class`
 - `Fraud_Probability`, when the trained model supports probabilities
 
+## Run UI App
+
+Start the Streamlit app:
+
+```powershell
+python -m streamlit run app/streamlit_app.py
+```
+
+The UI lets you:
+
+- inspect the dataset
+- train all models
+- view saved metrics and confusion matrices
+- upload a CSV and download predictions
+
 ## Run Notebooks
 
 Install dependencies, then start Jupyter:
