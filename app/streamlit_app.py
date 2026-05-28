@@ -30,7 +30,7 @@ from fraud_detection_pipeline import (  # noqa: E402
 
 st.set_page_config(
     page_title="Fraud Detection",
-    page_icon="",
+    page_icon=".",
     layout="wide",
 )
 
@@ -45,78 +45,193 @@ def inject_styles() -> None:
     st.markdown(
         """
         <style>
+        :root {
+            --app-bg: #0d1117;
+            --panel: #151a23;
+            --panel-soft: #111827;
+            --line: #2d3748;
+            --text: #f8fafc;
+            --muted: #aab6c5;
+            --accent: #ff4b55;
+            --accent-blue: #2f81f7;
+            --good: #22c55e;
+        }
+        .stApp {
+            background: var(--app-bg);
+        }
+        header[data-testid="stHeader"] {
+            background: transparent;
+        }
         .block-container {
-            padding-top: 1.5rem;
-            padding-bottom: 2rem;
             max-width: 1180px;
+            padding-top: 1.25rem;
+            padding-bottom: 2rem;
         }
-        h1 {
-            margin-bottom: 0.25rem;
+        .app-header {
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 1.1rem;
+            padding: 0.25rem 0 1.1rem;
         }
-        h2, h3 {
-            margin-top: 1.25rem;
+        .app-title-row {
+            align-items: flex-end;
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
         }
-        .st-emotion-cache-gi0tri,
-        .st-emotion-cache-1vbkxwb {
-            display: none;
+        .app-title {
+            color: var(--text);
+            font-size: clamp(2rem, 4vw, 3.15rem);
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.02;
+            margin: 0;
+        }
+        .app-subtitle {
+            color: var(--muted);
+            font-size: 0.98rem;
+            margin-top: 0.65rem;
+        }
+        .status-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            justify-content: flex-end;
+        }
+        .status-pill {
+            background: var(--panel-soft);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--text);
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 0.45rem 0.7rem;
+            white-space: nowrap;
+        }
+        .status-pill.ready {
+            border-color: rgba(34, 197, 94, 0.5);
+            color: #86efac;
+        }
+        .status-pill.warn {
+            border-color: rgba(255, 75, 85, 0.5);
+            color: #fca5a5;
+        }
+        .section-title {
+            align-items: center;
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            margin: 1.2rem 0 0.75rem;
+        }
+        .section-title h2 {
+            color: var(--text);
+            font-size: 1.55rem;
+            letter-spacing: 0;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .section-note {
+            color: var(--muted);
+            font-size: 0.88rem;
+            text-align: right;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            border-bottom: 1px solid var(--line);
+            gap: 0.35rem;
+        }
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 6px 6px 0 0;
+            color: var(--text);
+            height: 2.7rem;
+            padding: 0 0.9rem;
+        }
+        .stTabs [aria-selected="true"] {
+            background: rgba(255, 75, 85, 0.08);
+            color: var(--accent);
         }
         .metric-grid {
             display: grid;
+            gap: 0.9rem;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 1rem;
-            margin: 0.85rem 0 1.25rem;
+            margin: 0.85rem 0 1.05rem;
         }
         .metric-grid.three {
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
         .metric-card {
-            border: 1px solid #30363d;
+            background: linear-gradient(180deg, #171d27 0%, #131922 100%);
+            border: 1px solid var(--line);
             border-radius: 8px;
-            padding: 1rem 1rem 0.95rem;
-            background: #161b22;
-            min-height: 104px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
             display: flex;
             flex-direction: column;
             justify-content: center;
+            min-height: 104px;
+            padding: 1rem;
         }
         .metric-label {
-            color: #f8fafc;
+            color: var(--muted);
             font-size: 0.82rem;
-            font-weight: 700;
+            font-weight: 800;
             line-height: 1.1;
             margin-bottom: 0.65rem;
         }
         .metric-value {
-            color: #f8fafc;
+            color: var(--text);
             font-size: 2rem;
-            line-height: 1;
             font-weight: 500;
+            line-height: 1;
         }
         .metric-value.compact {
-            font-size: 1.65rem;
-            line-height: 1.08;
+            font-size: 1.55rem;
+            line-height: 1.1;
         }
         .metric-delta {
-            color: #22c55e;
+            color: var(--good);
             font-size: 0.9rem;
             line-height: 1;
             margin-top: 0.65rem;
         }
         .status-line {
-            border-left: 4px solid #2563eb;
-            padding: 0.65rem 0.9rem;
-            background: #111827;
-            color: #f8fafc;
-            margin: 1rem 0 1rem;
-            font-weight: 700;
+            background: var(--panel-soft);
+            border-left: 4px solid var(--accent-blue);
+            border-radius: 0 8px 8px 0;
+            color: var(--text);
+            font-weight: 800;
+            margin: 1rem 0;
+            padding: 0.75rem 0.9rem;
         }
         .control-button-spacer {
-            height: 1.75rem;
+            height: 1.78rem;
         }
         div[data-testid="stExpander"] {
+            background: rgba(17, 24, 39, 0.45);
+            border-color: var(--line);
             margin-bottom: 0.75rem;
         }
+        div[data-testid="stDataFrame"] {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .stButton > button,
+        .stDownloadButton > button {
+            border-radius: 8px;
+            font-weight: 800;
+            min-height: 2.75rem;
+        }
+        .figure-title {
+            color: var(--text);
+            font-size: 0.9rem;
+            font-weight: 800;
+            margin: 0.6rem 0 0.65rem;
+        }
         @media (max-width: 900px) {
+            .app-title-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .status-pills {
+                justify-content: flex-start;
+            }
             .metric-grid,
             .metric-grid.three {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -129,6 +244,46 @@ def inject_styles() -> None:
             }
         }
         </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_header() -> None:
+    dataset_ready = DEFAULT_DATASET.exists()
+    model_ready = BEST_MODEL_PATH.exists()
+    dataset_class = "ready" if dataset_ready else "warn"
+    model_class = "ready" if model_ready else "warn"
+    dataset_text = "Dataset ready" if dataset_ready else "Dataset missing"
+    model_text = "Model ready" if model_ready else "Model missing"
+
+    st.markdown(
+        f"""
+        <div class="app-header">
+            <div class="app-title-row">
+                <div>
+                    <h1 class="app-title">Credit Card Fraud Detection</h1>
+                    <div class="app-subtitle">Model training, evaluation, and transaction scoring</div>
+                </div>
+                <div class="status-pills">
+                    <div class="status-pill {dataset_class}">{dataset_text}</div>
+                    <div class="status-pill {model_class}">{model_text}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_section(title: str, note: str | None = None) -> None:
+    note_html = f'<div class="section-note">{escape(note)}</div>' if note else ""
+    st.markdown(
+        f"""
+        <div class="section-title">
+            <h2>{escape(title)}</h2>
+            {note_html}
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -148,6 +303,14 @@ def render_metric_grid(items: list[tuple[str, str, str | None]], columns: int = 
             "</div>"
         )
     st.markdown(f'<div class="{grid_class}">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
+def format_summary(summary: pd.DataFrame) -> pd.DataFrame:
+    display = summary.copy()
+    for column in ["Accuracy", "Precision_Fraud", "Recall_Fraud", "F1_Fraud"]:
+        if column in display:
+            display[column] = display[column].map(lambda value: f"{value:.3f}")
+    return display
 
 
 def load_summary() -> pd.DataFrame | None:
@@ -180,17 +343,17 @@ def show_dataset_overview(df: pd.DataFrame) -> None:
 
 
 def train_view() -> None:
-    st.subheader("Training")
+    render_section("Training", "data/raw/creditcard.csv")
     df = dataset_status()
     if df is None:
         return
 
     show_dataset_overview(df)
 
-    with st.expander("Preview dataset", expanded=False):
+    with st.expander("Dataset preview", expanded=False):
         st.dataframe(df.head(20), use_container_width=True, hide_index=True)
 
-    control_cols = st.columns([1, 1, 2])
+    control_cols = st.columns([1, 1, 2], gap="medium")
     test_size = control_cols[0].slider("Test size", 0.10, 0.50, 0.30, 0.05)
     random_state = control_cols[1].number_input("Random seed", 0, 9999, 42, 1)
     control_cols[2].markdown('<div class="control-button-spacer"></div>', unsafe_allow_html=True)
@@ -204,16 +367,16 @@ def train_view() -> None:
                 random_state=int(random_state),
             )
         st.success("Training complete")
-        st.dataframe(summary, use_container_width=True, hide_index=True)
+        st.dataframe(format_summary(summary), use_container_width=True, hide_index=True)
 
     summary = load_summary()
     if summary is not None:
         st.markdown('<div class="status-line">Latest saved model results</div>', unsafe_allow_html=True)
-        st.dataframe(summary, use_container_width=True, hide_index=True)
+        st.dataframe(format_summary(summary), use_container_width=True, hide_index=True)
 
 
 def report_view() -> None:
-    st.subheader("Reports")
+    render_section("Reports", "saved model outputs")
     summary = load_summary()
     if summary is None:
         st.info("Train the models first to generate reports.")
@@ -229,7 +392,7 @@ def report_view() -> None:
         ]
     )
 
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    st.dataframe(format_summary(summary), use_container_width=True, hide_index=True)
 
     figure_paths = [
         FIGURES_DIR / "class_distribution.png",
@@ -240,17 +403,19 @@ def report_view() -> None:
     ]
     existing_figures = [path for path in figure_paths if path.exists()]
     if existing_figures:
-        image_cols = st.columns(2)
+        render_section("Charts")
+        image_cols = st.columns(2, gap="large")
         for index, image_path in enumerate(existing_figures):
-            image_cols[index % 2].image(
-                image_path.read_bytes(),
-                caption=image_path.stem.replace("_", " ").title(),
-                use_column_width=True,
-            )
+            with image_cols[index % 2]:
+                st.markdown(
+                    f'<div class="figure-title">{escape(image_path.stem.replace("_", " ").title())}</div>',
+                    unsafe_allow_html=True,
+                )
+                st.image(image_path.read_bytes(), use_column_width=True)
 
 
 def prediction_view() -> None:
-    st.subheader("Prediction")
+    render_section("Prediction", "batch scoring")
 
     if not BEST_MODEL_PATH.exists():
         st.warning("Train the models first so the app can load models/best_model.joblib.")
@@ -301,8 +466,7 @@ def prediction_view() -> None:
 
 def main() -> None:
     inject_styles()
-    st.title("Credit Card Fraud Detection")
-    st.caption("Train, compare, and use fraud detection models.")
+    render_header()
 
     tabs = st.tabs(["Train", "Reports", "Predict"])
     with tabs[0]:
