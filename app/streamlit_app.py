@@ -25,9 +25,10 @@ from fraud_detection_pipeline import (  # noqa: E402
     dataset_profile,
     load_dataset,
     resolve_dataset_path,
-    save_class_distribution_plot,
+    save_eda_outputs,
     train_and_evaluate,
 )
+from predict import FEATURE_COLUMNS, predict_transactions  # noqa: E402
 
 
 st.set_page_config(
@@ -41,7 +42,8 @@ BEST_MODEL_PATH = MODELS_DIR / "best_model.joblib"
 SUMMARY_PATH = REPORTS_DIR / "model_results_summary.csv"
 METADATA_PATH = REPORTS_DIR / "training_metadata.json"
 PREDICTION_OUTPUT = REPORTS_DIR / "ui_predictions.csv"
-FEATURE_COLUMNS = ["Time", *[f"V{i}" for i in range(1, 29)], "Amount"]
+DATA_QUALITY_PATH = REPORTS_DIR / "data_quality_report.csv"
+FEATURE_IMPORTANCE_PATH = REPORTS_DIR / "feature_importance.csv"
 
 
 def inject_styles() -> None:
@@ -331,6 +333,18 @@ def load_metadata() -> dict[str, object] | None:
         return json.load(file)
 
 
+def load_data_quality() -> pd.DataFrame | None:
+    if DATA_QUALITY_PATH.exists():
+        return pd.read_csv(DATA_QUALITY_PATH)
+    return None
+
+
+def load_feature_importance() -> pd.DataFrame | None:
+    if FEATURE_IMPORTANCE_PATH.exists():
+        return pd.read_csv(FEATURE_IMPORTANCE_PATH)
+    return None
+
+
 def dataset_status() -> pd.DataFrame | None:
     try:
         return load_dataset(resolve_dataset_path())
@@ -380,7 +394,7 @@ def train_view() -> None:
 
     if control_cols[2].button("Train Models", type="primary", use_container_width=True):
         with st.spinner("Training and comparing models..."):
-            save_class_distribution_plot(df)
+            save_eda_outputs(df, active_dataset)
             summary = train_and_evaluate(
                 df,
                 test_size=float(test_size),
@@ -428,10 +442,13 @@ def report_view() -> None:
 
     figure_paths = [
         FIGURES_DIR / "class_distribution.png",
+        FIGURES_DIR / "amount_by_class.png",
         FIGURES_DIR / "logistic_regression_confusion_matrix.png",
         FIGURES_DIR / "decision_tree_confusion_matrix.png",
         FIGURES_DIR / "random_forest_confusion_matrix.png",
         FIGURES_DIR / "knn_confusion_matrix.png",
+        FIGURES_DIR / "random_forest_feature_importance.png",
+        FIGURES_DIR / "logistic_regression_feature_importance.png",
     ]
     existing_figures = [path for path in figure_paths if path.exists()]
     if existing_figures:
@@ -446,6 +463,46 @@ def report_view() -> None:
                 st.image(image_path.read_bytes(), use_column_width=True)
 
 
+def insights_view() -> None:
+    render_section("Insights", "dataset quality and model drivers")
+    df = dataset_status()
+    if df is None:
+        return
+
+    active_dataset = resolve_dataset_path()
+    profile = dataset_profile(df, active_dataset)
+    amount_stats = df.groupby(TARGET_COLUMN)["Amount"].agg(["count", "mean", "median", "max"])
+
+    render_metric_grid(
+        [
+            ("Fraud Rate", f"{profile['fraud_rate']:.3%}", None),
+            ("Missing Values", f"{int(df.isna().sum().sum()):,}", None),
+            ("Median Amount", f"{df['Amount'].median():.2f}", None),
+            ("Max Amount", f"{df['Amount'].max():.2f}", None),
+        ]
+    )
+
+    with st.expander("Amount statistics by class", expanded=True):
+        st.dataframe(amount_stats, use_container_width=True)
+
+    quality = load_data_quality()
+    if quality is not None:
+        with st.expander("Data quality report", expanded=False):
+            st.dataframe(quality, use_container_width=True, hide_index=True)
+    else:
+        st.info("Train once to generate reports/data_quality_report.csv.")
+
+    importance = load_feature_importance()
+    if importance is not None:
+        model_names = sorted(importance["Model"].unique())
+        selected_model = st.selectbox("Feature importance model", model_names)
+        selected = importance[importance["Model"] == selected_model].head(15)
+        st.bar_chart(selected.set_index("Feature")["Importance"])
+        st.dataframe(selected, use_container_width=True, hide_index=True)
+    else:
+        st.info("Train once to generate reports/feature_importance.csv.")
+
+
 def prediction_view() -> None:
     render_section("Prediction", "batch scoring")
 
@@ -453,59 +510,86 @@ def prediction_view() -> None:
         st.warning("Train the models first so the app can load models/best_model.joblib.")
         return
 
+    model = joblib.load(BEST_MODEL_PATH)
+    threshold = st.slider("Fraud probability threshold", 0.05, 0.95, 0.50, 0.05)
     uploaded_file = st.file_uploader("Upload transaction CSV", type=["csv"])
     if uploaded_file is None:
-        st.info("Upload a CSV with Time, V1-V28, and Amount columns.")
-        return
+        st.info("Upload a CSV with Time, V1-V28, and Amount columns, or use the manual scorer below.")
+    else:
+        input_df = pd.read_csv(uploaded_file)
+        try:
+            output = predict_transactions(model, input_df, threshold=threshold)
+        except ValueError as exc:
+            st.error(str(exc))
+            return
 
-    input_df = pd.read_csv(uploaded_file)
-    missing_columns = [column for column in FEATURE_COLUMNS if column not in input_df.columns]
-    if missing_columns:
-        st.error(f"Missing required columns: {missing_columns}")
-        return
+        fraud_count = int((output["Predicted_Class"] == 1).sum())
+        render_metric_grid(
+            [
+                ("Rows Scored", f"{len(output):,}", None),
+                ("Predicted Fraud", f"{fraud_count:,}", None),
+                ("Predicted Normal", f"{len(output) - fraud_count:,}", None),
+            ],
+            columns=3,
+        )
 
-    model = joblib.load(BEST_MODEL_PATH)
-    features = input_df[FEATURE_COLUMNS]
-    predictions = model.predict(features)
+        st.dataframe(output, use_container_width=True, hide_index=True)
 
-    output = input_df.copy()
-    output["Predicted_Class"] = predictions
-    if hasattr(model, "predict_proba"):
-        output["Fraud_Probability"] = model.predict_proba(features)[:, 1]
+        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        output.to_csv(PREDICTION_OUTPUT, index=False)
+        st.download_button(
+            "Download Predictions",
+            data=output.to_csv(index=False),
+            file_name="predictions.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
 
-    fraud_count = int((output["Predicted_Class"] == 1).sum())
-    render_metric_grid(
-        [
-            ("Rows Scored", f"{len(output):,}", None),
-            ("Predicted Fraud", f"{fraud_count:,}", None),
-            ("Predicted Normal", f"{len(output) - fraud_count:,}", None),
-        ],
-        columns=3,
+    render_section("Manual Scorer", "single transaction")
+    active_dataset = dataset_status()
+    sample_row = active_dataset[FEATURE_COLUMNS].median(numeric_only=True) if active_dataset is not None else None
+
+    input_cols = st.columns(2)
+    time_value = input_cols[0].number_input(
+        "Time",
+        value=float(sample_row["Time"]) if sample_row is not None else 0.0,
+    )
+    amount_value = input_cols[1].number_input(
+        "Amount",
+        value=float(sample_row["Amount"]) if sample_row is not None else 0.0,
     )
 
-    st.dataframe(output, use_container_width=True, hide_index=True)
+    values = {"Time": time_value, "Amount": amount_value}
+    with st.expander("Advanced V1-V28 values", expanded=False):
+        v_cols = st.columns(4)
+        for index in range(1, 29):
+            feature = f"V{index}"
+            default = float(sample_row[feature]) if sample_row is not None else 0.0
+            values[feature] = v_cols[(index - 1) % 4].number_input(feature, value=default)
 
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    output.to_csv(PREDICTION_OUTPUT, index=False)
-    st.download_button(
-        "Download Predictions",
-        data=output.to_csv(index=False),
-        file_name="predictions.csv",
-        mime="text/csv",
-        use_container_width=True,
-    )
+    if st.button("Score Transaction", use_container_width=True):
+        manual_df = pd.DataFrame([{column: values[column] for column in FEATURE_COLUMNS}])
+        scored = predict_transactions(model, manual_df, threshold=threshold)
+        prediction = "Fraud" if int(scored.iloc[0]["Predicted_Class"]) == 1 else "Normal"
+        probability = scored.iloc[0].get("Fraud_Probability")
+        if probability is not None:
+            st.success(f"Prediction: {prediction} | Fraud probability: {probability:.3f}")
+        else:
+            st.success(f"Prediction: {prediction}")
 
 
 def main() -> None:
     inject_styles()
     render_header()
 
-    tabs = st.tabs(["Train", "Reports", "Predict"])
+    tabs = st.tabs(["Train", "Insights", "Reports", "Predict"])
     with tabs[0]:
         train_view()
     with tabs[1]:
-        report_view()
+        insights_view()
     with tabs[2]:
+        report_view()
+    with tabs[3]:
         prediction_view()
 
 
