@@ -1,91 +1,76 @@
 # Credit Card Fraud Detection ML
 
-Machine learning project for detecting fraudulent credit card transactions using
-the Kaggle credit card fraud dataset.
+A complete machine learning project for credit card fraud detection using the
+Kaggle Credit Card Fraud Detection dataset.
 
-The project includes the original notebooks plus a clean Python pipeline that
-can train, compare, save, and reuse fraud detection models.
+The project now includes:
 
-## Project Structure
+- reusable Python training pipeline
+- Streamlit UI dashboard
+- model comparison reports
+- saved best model
+- batch prediction script
+- original Jupyter notebooks
+- optional synthetic sample data generator for testing only
 
-```text
-.
-├── data/
-│   ├── raw/                  # Put creditcard.csv here
-│   └── processed/
-├── models/                   # Saved trained model
-├── notebooks/                # Original Jupyter notebooks
-├── reports/
-│   ├── figures/              # Confusion matrices and class distribution plot
-│   └── model_results_summary.csv
-├── src/
-│   ├── fraud_detection_pipeline.py
-│   └── predict.py
-├── requirements.txt
-└── README.md
-```
+## Active Dataset
 
-## Missing File
-
-This repository can run with a small synthetic demo dataset, but real model
-results require the real dataset.
-
-Download the Kaggle dataset named **Credit Card Fraud Detection** and place the
-CSV file here:
+The project auto-detects datasets in this order:
 
 ```text
+data/raw/kaggel-creditcard.csv
+data/raw/kaggle-creditcard.csv
 data/raw/creditcard.csv
 ```
 
-To create a small local demo CSV with the same columns:
-
-```powershell
-python src/create_sample_dataset.py
-```
-
-That creates:
+Your real Kaggle dataset is currently:
 
 ```text
-data/raw/creditcard.csv
+data/raw/kaggel-creditcard.csv
 ```
 
-The generated file is only for testing the code. Do not use it as real fraud
-detection evidence or final project results.
+The smaller `data/raw/creditcard.csv` file is synthetic demo data. The training
+pipeline and UI now prefer the real Kaggle file when it exists.
 
-Expected dataset columns:
+Expected columns:
 
 - `Time`
 - `V1` to `V28`
 - `Amount`
 - `Class`
 
-`Class` means:
+`Class` values:
 
 - `0` = normal transaction
-- `1` = fraud transaction
+- `1` = fraudulent transaction
 
-## How It Works
+## Project Structure
 
-1. Load `creditcard.csv`.
-2. Validate the expected columns.
-3. Check the original class distribution.
-4. Balance the dataset by undersampling normal transactions.
-5. Split data into training and testing sets.
-6. Scale features using `StandardScaler`.
-7. Train four models:
-   - Logistic Regression
-   - Decision Tree
-   - Random Forest
-   - KNN
-8. Compare models using accuracy, precision, recall, and F1-score for fraud.
-9. Save:
-   - model summary CSV
-   - confusion matrix images
-   - best model as `models/best_model.joblib`
+```text
+.
+|-- app/
+|   `-- streamlit_app.py
+|-- data/
+|   |-- raw/
+|   |   |-- kaggel-creditcard.csv
+|   |   `-- creditcard.csv
+|   `-- processed/
+|-- models/
+|   `-- best_model.joblib
+|-- notebooks/
+|-- reports/
+|   |-- figures/
+|   |-- model_results_summary.csv
+|   `-- training_metadata.json
+|-- src/
+|   |-- create_sample_dataset.py
+|   |-- fraud_detection_pipeline.py
+|   `-- predict.py
+|-- requirements.txt
+`-- README.md
+```
 
 ## Setup
-
-From the project folder:
 
 ```powershell
 python -m venv .venv
@@ -96,83 +81,93 @@ pip install -r requirements.txt
 ## Run Training
 
 ```powershell
-python src/create_sample_dataset.py
 python src/fraud_detection_pipeline.py
 ```
 
-Optional custom dataset path:
+Optional custom dataset:
 
 ```powershell
-python src/fraud_detection_pipeline.py --data path\to\creditcard.csv
+python src/fraud_detection_pipeline.py --data data/raw/kaggel-creditcard.csv
 ```
 
-After training, check:
+Training creates:
 
 ```text
-reports/model_results_summary.csv
-reports/figures/
 models/best_model.joblib
+reports/model_results_summary.csv
+reports/training_metadata.json
+reports/figures/
 ```
-
-## Run Prediction
-
-After training, predict fraud labels for a CSV file with the same feature
-columns:
-
-```powershell
-python src/predict.py data/raw/creditcard.csv --output reports/predictions.csv
-```
-
-The prediction output adds:
-
-- `Predicted_Class`
-- `Fraud_Probability`, when the trained model supports probabilities
 
 ## Run UI App
-
-Start the Streamlit app:
 
 ```powershell
 python -m streamlit run app/streamlit_app.py
 ```
 
-The UI lets you:
-
-- inspect the dataset
-- train all models
-- view saved metrics and confusion matrices
-- upload a CSV and download predictions
-
-## Run Notebooks
-
-Install dependencies, then start Jupyter:
-
-```powershell
-jupyter notebook
-```
-
-Recommended notebook:
+Then open:
 
 ```text
-notebooks/model_comparison.ipynb
+http://localhost:8501
 ```
 
-The notebooks were the original project work. The `src/` pipeline is the
-cleaner and more reliable way to run the full project.
+The UI lets you:
 
-## Known Issues Fixed
+- inspect the active dataset
+- train all models
+- view model metrics
+- view confusion matrix charts
+- upload a CSV for batch prediction
+- download predictions
 
-- Added missing project folders: `data/`, `src/`, `models/`, and `reports/`.
-- Added a runnable training pipeline.
-- Added dataset validation and clear missing-file errors.
-- Added model comparison output.
-- Added saved plots and saved best model.
-- Added prediction script.
-- Added Jupyter and model-saving dependencies.
+## Run Prediction
+
+After training:
+
+```powershell
+python src/predict.py data/raw/kaggel-creditcard.csv --output reports/predictions.csv
+```
+
+Prediction output adds:
+
+- `Predicted_Class`
+- `Fraud_Probability`, if the selected model supports probabilities
+
+## How The ML Works
+
+1. Load the active Kaggle-format CSV.
+2. Validate required columns.
+3. Show original class distribution.
+4. Balance the training data by undersampling normal transactions.
+5. Split balanced data into train/test sets.
+6. Scale features with `StandardScaler`.
+7. Train:
+   - Logistic Regression
+   - Decision Tree
+   - Random Forest
+   - KNN
+8. Compare models using:
+   - Accuracy
+   - Fraud precision
+   - Fraud recall
+   - Fraud F1-score
+   - Confusion matrix values
+9. Save the best model based on fraud F1-score and recall.
+
+## Optional Demo Dataset
+
+Only use this when you do not have the real Kaggle dataset:
+
+```powershell
+python src/create_sample_dataset.py
+```
+
+This creates `data/raw/creditcard.csv`, but it is synthetic and should not be
+used for final results.
 
 ## Important Note
 
-The project uses undersampling to balance fraud and normal classes. This makes
-training faster and easier for learning, but in a real fraud detection system
-you should also test other imbalance strategies and evaluate carefully on the
-original imbalanced distribution.
+The current pipeline uses undersampling to handle the strong class imbalance.
+This is good for a learning project and fast model comparison. For production
+fraud detection, also evaluate on the original imbalanced distribution and
+consider class weights, threshold tuning, and cost-sensitive metrics.
