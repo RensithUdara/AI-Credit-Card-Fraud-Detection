@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import sys
 import json
 from html import escape
@@ -54,15 +55,19 @@ def inject_styles() -> None:
             --app-bg: #0d1117;
             --panel: #151a23;
             --panel-soft: #111827;
+            --panel-strong: #1a2230;
             --line: #2d3748;
             --text: #f8fafc;
             --muted: #aab6c5;
             --accent: #ff4b55;
             --accent-blue: #2f81f7;
             --good: #22c55e;
+            --warn: #f59e0b;
         }
         .stApp {
-            background: var(--app-bg);
+            background:
+                radial-gradient(circle at 14% 0%, rgba(47, 129, 247, 0.12), transparent 26rem),
+                linear-gradient(180deg, #0d1117 0%, #0a0f17 100%);
         }
         header[data-testid="stHeader"] {
             background: transparent;
@@ -73,9 +78,12 @@ def inject_styles() -> None:
             padding-bottom: 2rem;
         }
         .app-header {
-            border-bottom: 1px solid var(--line);
-            margin-bottom: 1.1rem;
-            padding: 0.25rem 0 1.1rem;
+            background: linear-gradient(135deg, rgba(21, 26, 35, 0.94), rgba(17, 24, 39, 0.76));
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 8px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+            margin-bottom: 1rem;
+            padding: 1.15rem 1.25rem;
         }
         .app-title-row {
             align-items: flex-end;
@@ -85,7 +93,7 @@ def inject_styles() -> None:
         }
         .app-title {
             color: var(--text);
-            font-size: clamp(2rem, 4vw, 3.15rem);
+            font-size: clamp(2rem, 4vw, 3rem);
             font-weight: 800;
             letter-spacing: 0;
             line-height: 1.02;
@@ -95,6 +103,12 @@ def inject_styles() -> None:
             color: var(--muted);
             font-size: 0.98rem;
             margin-top: 0.65rem;
+        }
+        .header-meta {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-top: 0.45rem;
         }
         .status-pills {
             display: flex;
@@ -140,18 +154,24 @@ def inject_styles() -> None:
             text-align: right;
         }
         .stTabs [data-baseweb="tab-list"] {
-            border-bottom: 1px solid var(--line);
-            gap: 0.35rem;
+            background: rgba(17, 24, 39, 0.55);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            border-radius: 8px;
+            gap: 0.25rem;
+            padding: 0.25rem;
         }
         .stTabs [data-baseweb="tab"] {
-            border-radius: 6px 6px 0 0;
+            border-radius: 6px;
             color: var(--text);
-            height: 2.7rem;
-            padding: 0 0.9rem;
+            height: 2.55rem;
+            padding: 0 1rem;
         }
         .stTabs [aria-selected="true"] {
-            background: rgba(255, 75, 85, 0.08);
-            color: var(--accent);
+            background: rgba(255, 75, 85, 0.16);
+            color: #ffffff;
+        }
+        .stTabs [data-baseweb="tab-highlight"] {
+            display: none;
         }
         .metric-grid {
             display: grid;
@@ -163,8 +183,8 @@ def inject_styles() -> None:
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
         .metric-card {
-            background: linear-gradient(180deg, #171d27 0%, #131922 100%);
-            border: 1px solid var(--line);
+            background: linear-gradient(180deg, #17202c 0%, #121923 100%);
+            border: 1px solid rgba(148, 163, 184, 0.16);
             border-radius: 8px;
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
             display: flex;
@@ -172,6 +192,9 @@ def inject_styles() -> None:
             justify-content: center;
             min-height: 104px;
             padding: 1rem;
+        }
+        .metric-card:hover {
+            border-color: rgba(47, 129, 247, 0.45);
         }
         .metric-label {
             color: var(--muted);
@@ -208,6 +231,29 @@ def inject_styles() -> None:
         .control-button-spacer {
             height: 1.78rem;
         }
+        .info-card {
+            background: linear-gradient(135deg, rgba(21, 26, 35, 0.96), rgba(17, 24, 39, 0.9));
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 8px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+            color: var(--text);
+            margin: 0.75rem 0 1rem;
+            padding: 1rem;
+        }
+        .info-card-title {
+            color: var(--text);
+            font-size: 0.92rem;
+            font-weight: 800;
+            margin-bottom: 0.45rem;
+        }
+        .info-card-body {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+        .info-card-body strong {
+            color: var(--text);
+        }
         div[data-testid="stExpander"] {
             background: rgba(17, 24, 39, 0.45);
             border-color: var(--line);
@@ -223,11 +269,40 @@ def inject_styles() -> None:
             font-weight: 800;
             min-height: 2.75rem;
         }
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, #ff4b55, #e83f49);
+            border: 0;
+        }
         .figure-title {
             color: var(--text);
             font-size: 0.9rem;
             font-weight: 800;
             margin: 0.6rem 0 0.65rem;
+        }
+        .figure-frame {
+            background: var(--panel);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            padding: 0.85rem;
+        }
+        .result-normal {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            border-radius: 8px;
+            color: #bbf7d0;
+            font-weight: 800;
+            margin-top: 0.75rem;
+            padding: 0.85rem 1rem;
+        }
+        .result-fraud {
+            background: rgba(255, 75, 85, 0.14);
+            border: 1px solid rgba(255, 75, 85, 0.38);
+            border-radius: 8px;
+            color: #fecaca;
+            font-weight: 800;
+            margin-top: 0.75rem;
+            padding: 0.85rem 1rem;
         }
         @media (max-width: 900px) {
             .app-title-row {
@@ -270,12 +345,48 @@ def render_header() -> None:
                 <div>
                     <h1 class="app-title">Credit Card Fraud Detection</h1>
                     <div class="app-subtitle">Model training, evaluation, and transaction scoring</div>
+                    <div class="header-meta">{escape(active_dataset.name)}</div>
                 </div>
                 <div class="status-pills">
                     <div class="status-pill {dataset_class}">{dataset_text}</div>
                     <div class="status-pill {model_class}">{model_text}</div>
                 </div>
             </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_info_card(title: str, body: str) -> None:
+    st.markdown(
+        f"""
+        <div class="info-card">
+            <div class="info-card-title">{escape(title)}</div>
+            <div class="info-card-body">{body}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_result(prediction: str, probability: float | None) -> None:
+    result_class = "result-fraud" if prediction == "Fraud" else "result-normal"
+    probability_text = "" if probability is None else f" | Fraud probability: {probability:.3f}"
+    st.markdown(
+        f'<div class="{result_class}">Prediction: {escape(prediction)}{probability_text}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_image_card(image_path: Path) -> None:
+    encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
+    title = image_path.stem.replace("_", " ").title()
+    st.markdown(
+        f"""
+        <div class="figure-frame">
+            <div class="figure-title">{escape(title)}</div>
+            <img src="data:image/png;base64,{encoded}" style="width:100%; border-radius:6px;" />
         </div>
         """,
         unsafe_allow_html=True,
@@ -377,11 +488,12 @@ def train_view() -> None:
 
     show_dataset_overview(df)
     profile = dataset_profile(df, active_dataset)
-    st.caption(
-        "Active dataset: "
-        f"{Path(profile['source']).name} | "
-        f"{profile['rows']:,} rows | "
-        f"{profile['fraud_transactions']:,} fraud transactions"
+    render_info_card(
+        "Active Dataset",
+        "Using <strong>"
+        f"{escape(Path(profile['source']).name)}</strong> with "
+        f"<strong>{profile['rows']:,}</strong> rows and "
+        f"<strong>{profile['fraud_transactions']:,}</strong> fraud transactions.",
     )
 
     with st.expander("Dataset preview", expanded=False):
@@ -420,12 +532,13 @@ def report_view() -> None:
     metadata = load_metadata()
     if metadata and metadata.get("dataset"):
         dataset = metadata["dataset"]
-        st.caption(
-            "Trained on "
-            f"{Path(str(dataset['source'])).name} | "
-            f"{int(dataset['rows']):,} rows | "
-            f"{int(dataset['fraud_transactions']):,} fraud transactions | "
-            f"{int(metadata['balanced_rows_used_for_training']):,} balanced rows used"
+        render_info_card(
+            "Training Source",
+            "Trained on <strong>"
+            f"{escape(Path(str(dataset['source'])).name)}</strong> with "
+            f"<strong>{int(dataset['rows']):,}</strong> rows, "
+            f"<strong>{int(dataset['fraud_transactions']):,}</strong> fraud transactions, and "
+            f"<strong>{int(metadata['balanced_rows_used_for_training']):,}</strong> balanced rows used.",
         )
 
     best = summary.iloc[0]
@@ -456,11 +569,7 @@ def report_view() -> None:
         image_cols = st.columns(2, gap="large")
         for index, image_path in enumerate(existing_figures):
             with image_cols[index % 2]:
-                st.markdown(
-                    f'<div class="figure-title">{escape(image_path.stem.replace("_", " ").title())}</div>',
-                    unsafe_allow_html=True,
-                )
-                st.image(image_path.read_bytes(), use_column_width=True)
+                render_image_card(image_path)
 
 
 def insights_view() -> None:
@@ -472,6 +581,12 @@ def insights_view() -> None:
     active_dataset = resolve_dataset_path()
     profile = dataset_profile(df, active_dataset)
     amount_stats = df.groupby(TARGET_COLUMN)["Amount"].agg(["count", "mean", "median", "max"])
+
+    render_info_card(
+        "Dataset Health",
+        "This view summarizes class imbalance, missing values, amount behavior, "
+        "and the strongest model features from the latest training run.",
+    )
 
     render_metric_grid(
         [
@@ -511,6 +626,11 @@ def prediction_view() -> None:
         return
 
     model = joblib.load(BEST_MODEL_PATH)
+    render_info_card(
+        "Scoring Controls",
+        "Lower thresholds catch more possible fraud but increase false alerts. "
+        "Higher thresholds are stricter and reduce alerts.",
+    )
     threshold = st.slider("Fraud probability threshold", 0.05, 0.95, 0.50, 0.05)
     uploaded_file = st.file_uploader("Upload transaction CSV", type=["csv"])
     if uploaded_file is None:
@@ -572,10 +692,7 @@ def prediction_view() -> None:
         scored = predict_transactions(model, manual_df, threshold=threshold)
         prediction = "Fraud" if int(scored.iloc[0]["Predicted_Class"]) == 1 else "Normal"
         probability = scored.iloc[0].get("Fraud_Probability")
-        if probability is not None:
-            st.success(f"Prediction: {prediction} | Fraud probability: {probability:.3f}")
-        else:
-            st.success(f"Prediction: {prediction}")
+        render_result(prediction, probability)
 
 
 def main() -> None:
