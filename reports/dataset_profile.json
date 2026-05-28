@@ -1,0 +1,8 @@
+{
+  "source": "C:\\Users\\USER\\Downloads\\credit-card-fraud-detection-ml-main\\credit-card-fraud-detection-ml-main\\data\\raw\\kaggel-creditcard.csv",
+  "rows": 284807,
+  "columns": 31,
+  "normal_transactions": 284315,
+  "fraud_transactions": 492,
+  "fraud_rate": 0.001727485630620034
+}
