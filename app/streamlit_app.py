@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import json
 from html import escape
 from pathlib import Path
 
@@ -17,12 +18,13 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from fraud_detection_pipeline import (  # noqa: E402
-    DEFAULT_DATASET,
     FIGURES_DIR,
     MODELS_DIR,
     REPORTS_DIR,
     TARGET_COLUMN,
+    dataset_profile,
     load_dataset,
+    resolve_dataset_path,
     save_class_distribution_plot,
     train_and_evaluate,
 )
@@ -37,6 +39,7 @@ st.set_page_config(
 
 BEST_MODEL_PATH = MODELS_DIR / "best_model.joblib"
 SUMMARY_PATH = REPORTS_DIR / "model_results_summary.csv"
+METADATA_PATH = REPORTS_DIR / "training_metadata.json"
 PREDICTION_OUTPUT = REPORTS_DIR / "ui_predictions.csv"
 FEATURE_COLUMNS = ["Time", *[f"V{i}" for i in range(1, 29)], "Amount"]
 
@@ -250,7 +253,8 @@ def inject_styles() -> None:
 
 
 def render_header() -> None:
-    dataset_ready = DEFAULT_DATASET.exists()
+    active_dataset = resolve_dataset_path()
+    dataset_ready = active_dataset.exists()
     model_ready = BEST_MODEL_PATH.exists()
     dataset_class = "ready" if dataset_ready else "warn"
     model_class = "ready" if model_ready else "warn"
@@ -319,9 +323,17 @@ def load_summary() -> pd.DataFrame | None:
     return None
 
 
+def load_metadata() -> dict[str, object] | None:
+    if not METADATA_PATH.exists():
+        return None
+
+    with METADATA_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
 def dataset_status() -> pd.DataFrame | None:
     try:
-        return load_dataset(DEFAULT_DATASET)
+        return load_dataset(resolve_dataset_path())
     except (FileNotFoundError, ValueError) as exc:
         st.error(str(exc))
         return None
@@ -343,12 +355,20 @@ def show_dataset_overview(df: pd.DataFrame) -> None:
 
 
 def train_view() -> None:
-    render_section("Training", "data/raw/creditcard.csv")
+    active_dataset = resolve_dataset_path()
+    render_section("Training", str(active_dataset.relative_to(PROJECT_ROOT)))
     df = dataset_status()
     if df is None:
         return
 
     show_dataset_overview(df)
+    profile = dataset_profile(df, active_dataset)
+    st.caption(
+        "Active dataset: "
+        f"{Path(profile['source']).name} | "
+        f"{profile['rows']:,} rows | "
+        f"{profile['fraud_transactions']:,} fraud transactions"
+    )
 
     with st.expander("Dataset preview", expanded=False):
         st.dataframe(df.head(20), use_container_width=True, hide_index=True)
@@ -365,6 +385,7 @@ def train_view() -> None:
                 df,
                 test_size=float(test_size),
                 random_state=int(random_state),
+                source_path=active_dataset,
             )
         st.success("Training complete")
         st.dataframe(format_summary(summary), use_container_width=True, hide_index=True)
@@ -381,6 +402,17 @@ def report_view() -> None:
     if summary is None:
         st.info("Train the models first to generate reports.")
         return
+
+    metadata = load_metadata()
+    if metadata and metadata.get("dataset"):
+        dataset = metadata["dataset"]
+        st.caption(
+            "Trained on "
+            f"{Path(str(dataset['source'])).name} | "
+            f"{int(dataset['rows']):,} rows | "
+            f"{int(dataset['fraud_transactions']):,} fraud transactions | "
+            f"{int(metadata['balanced_rows_used_for_training']):,} balanced rows used"
+        )
 
     best = summary.iloc[0]
     render_metric_grid(
