@@ -1,13 +1,20 @@
 # Data Folder
 
-Place the Kaggle credit card fraud dataset here:
+Place the Kaggle credit card fraud dataset in this folder.
 
 ```text
+data/raw/kaggel-creditcard.csv
+```
+
+The pipeline auto-detects these names in order:
+
+```text
+data/raw/kaggel-creditcard.csv
+data/raw/kaggle-creditcard.csv
 data/raw/creditcard.csv
 ```
 
-The original dataset is not committed because it is large and `.gitignore`
-excludes CSV files.
+CSV files are ignored by `.gitignore` because the real dataset is large.
 
 Expected columns:
 
