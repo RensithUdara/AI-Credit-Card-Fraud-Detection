@@ -1,8 +1,9 @@
 *.csv
 __pycache__/
 .ipynb_checkpoints/
-.env
 .venv/
 *.joblib
 reports/figures/*.png
 reports/*.csv
+config.bat
+node_modules
