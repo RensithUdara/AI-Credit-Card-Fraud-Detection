@@ -8,6 +8,10 @@ The project now includes:
 - reusable Python training pipeline
 - Streamlit UI dashboard
 - model comparison reports
+- dataset quality reports
+- feature importance reports
+- threshold-based fraud scoring
+- manual single-transaction scoring in the UI
 - saved best model
 - batch prediction script
 - original Jupyter notebooks
@@ -96,6 +100,9 @@ Training creates:
 models/best_model.joblib
 reports/model_results_summary.csv
 reports/training_metadata.json
+reports/dataset_profile.json
+reports/data_quality_report.csv
+reports/feature_importance.csv
 reports/figures/
 ```
 
@@ -115,9 +122,14 @@ The UI lets you:
 
 - inspect the active dataset
 - train all models
+- review dataset quality
+- inspect transaction amount patterns
+- inspect feature importance
 - view model metrics
 - view confusion matrix charts
 - upload a CSV for batch prediction
+- adjust the fraud probability threshold
+- score one manual transaction
 - download predictions
 
 ## Run Prediction
@@ -125,7 +137,7 @@ The UI lets you:
 After training:
 
 ```powershell
-python src/predict.py data/raw/kaggel-creditcard.csv --output reports/predictions.csv
+python src/predict.py data/raw/kaggel-creditcard.csv --output reports/predictions.csv --threshold 0.50
 ```
 
 Prediction output adds:
@@ -153,6 +165,18 @@ Prediction output adds:
    - Fraud F1-score
    - Confusion matrix values
 9. Save the best model based on fraud F1-score and recall.
+10. Save data quality, feature importance, and chart reports.
+
+## Added Functions
+
+Main functions added to the Python project:
+
+- `resolve_dataset_path()` auto-selects the best available dataset.
+- `create_data_quality_report()` saves missing values, unique counts, and numeric stats.
+- `dataset_profile()` saves row counts, fraud counts, and fraud rate.
+- `save_amount_by_class_plot()` compares transaction amounts for normal/fraud classes.
+- `extract_feature_importance()` exports model feature importance when supported.
+- `predict_transactions()` supports probability-threshold fraud prediction.
 
 ## Optional Demo Dataset
 
