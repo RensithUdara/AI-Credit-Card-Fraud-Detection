@@ -7,3 +7,6 @@ reports/figures/*.png
 reports/*.csv
 node_modules
 .env
+.env.*
+.env.local
+.env.production
