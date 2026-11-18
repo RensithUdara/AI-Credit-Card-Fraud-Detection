@@ -6,4 +6,4 @@ __pycache__/
 reports/figures/*.png
 reports/*.csv
 node_modules
-.env
+config.bat
