@@ -5,5 +5,5 @@ __pycache__/
 *.joblib
 reports/figures/*.png
 reports/*.csv
-config.bat
 node_modules
+.env
